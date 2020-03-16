@@ -12,6 +12,8 @@ class Repository {
         private const val SHARED_PREFS = "gym_prefs"
         private const val SHARED_PREFS_WORKOUTS = "workouts"
         private const val SHARED_PREFS_EXERCISES = "exercises"
+        private const val SHARED_PREFS_SELECTED_WORKOUT = "selected_workout"
+        private const val SHARED_PREFS_CURRENT_WORKOUT = "current_workout"
 
         private const val WORKOUT_ID = "id"
         private const val WORKOUT_WORKOUTABLES = "workoutables"
@@ -92,6 +94,33 @@ class Repository {
         }
     }
 
+    fun setWorkoutsJSON(context: Context, workouts: JSONArray){
+        context.getSharedPreferences(SHARED_PREFS, 0).edit().apply{
+            putString(SHARED_PREFS_WORKOUTS, workouts.toString())
+            commit()
+        }
+    }
+
+    fun setExercisesJSON(context: Context, exercises: JSONArray){
+        context.getSharedPreferences(SHARED_PREFS, 0).edit().apply{
+            putString(SHARED_PREFS_EXERCISES, exercises.toString())
+            commit()
+        }
+    }
+
+    fun clearMemory(context: Context){
+        context.getSharedPreferences(SHARED_PREFS, 0).edit().apply{
+            clear()
+            commit()
+        }
+    }
+
+
+    fun getWorkoutsJSON(context: Context): JSONArray{
+        val sp = context.getSharedPreferences(SHARED_PREFS, 0)
+        return JSONArray(sp.getString(SHARED_PREFS_WORKOUTS, "[]"))
+    }
+
     fun getWorkouts(context: Context): ArrayList<Workout> {
         val sp = context.getSharedPreferences(SHARED_PREFS, 0)
         val workoutsJSON = JSONArray(sp.getString(SHARED_PREFS_WORKOUTS, "[]"))
@@ -131,7 +160,7 @@ class Repository {
     }
 
     private fun getWorkoutableFromJSON(workoutableJSON: JSONObject): Workoutable{
-        return Workoutable(workoutableJSON.getInt(WORKOUTABLE_ID),
+        return Workoutable(workoutableJSON.getInt(WORKOUTABLE_ID), null,
             when (workoutableJSON.getString(WORKOUTABLE_TYPE)){
               WORKOUTABLE_TYPE_EXERCISE -> WorkoutableType.EXERCISE
               WORKOUTABLE_TYPE_WORKOUT -> WorkoutableType.WORKOUT
@@ -139,6 +168,63 @@ class Repository {
                     "Workoutable type has to be either '$WORKOUTABLE_TYPE_EXERCISE' or '$WORKOUTABLE_TYPE_WORKOUT'")
             }
         )
+    }
+
+    fun getSelectedWorkout(context: Context): Int?{
+        val sp = context.getSharedPreferences(SHARED_PREFS, 0)
+        val selectedWorkout = sp.getInt(SHARED_PREFS_SELECTED_WORKOUT, -1)
+
+        if(selectedWorkout == -1)
+            return null
+        return selectedWorkout
+    }
+
+    fun setSelectedWorkout(context: Context, workoutId: Int){
+        context.getSharedPreferences(SHARED_PREFS, 0).edit().apply{
+            putInt(SHARED_PREFS_SELECTED_WORKOUT, workoutId)
+            commit()
+        }
+    }
+
+    fun getCurrentWorkout(context: Context): List<Workoutable>?{
+        val sp = context.getSharedPreferences(SHARED_PREFS, 0)
+
+        if(!sp.contains(SHARED_PREFS_CURRENT_WORKOUT))
+            return null
+
+        val workoutables = ArrayList<Workoutable>()
+        val workoutablesJSON = JSONArray(sp.getString(SHARED_PREFS_CURRENT_WORKOUT, "[]"))
+        Log.d("GymTracker", "saved workoutablesJSON $workoutablesJSON")
+        for (i in 0 until workoutablesJSON.length()) {
+            getWorkoutableFromJSON(workoutablesJSON.getJSONObject(i))
+                .let{workoutables.add(it)}
+
+        }
+
+        return workoutables
+    }
+
+    fun setCurrentWorkout(context: Context, currentWorkout: List<Workoutable>){
+        val workoutables = JSONArray()
+        for (workoutable in currentWorkout){
+            JSONObject().apply {
+                put(WORKOUTABLE_ID, workoutable.id)
+                put(WORKOUTABLE_TYPE, when(workoutable.type){
+                    WorkoutableType.WORKOUT -> WORKOUTABLE_TYPE_WORKOUT
+                    WorkoutableType.EXERCISE -> WORKOUTABLE_TYPE_EXERCISE
+                })
+            }.also { workoutables.put(it) }
+        }
+
+        context.getSharedPreferences(SHARED_PREFS, 0).edit().apply{
+            putString(SHARED_PREFS_CURRENT_WORKOUT, workoutables.toString())
+            commit()
+        }
+    }
+
+    fun getExercisesJSON(context: Context): JSONArray{
+        val sp = context.getSharedPreferences(SHARED_PREFS, 0)
+        return JSONArray(sp.getString(SHARED_PREFS_EXERCISES, "[]"))
     }
 
     fun getExercises(context: Context): ArrayList<Exercise>{
@@ -154,23 +240,23 @@ class Repository {
 
     private fun getExerciseFromJSON(exerciseJSON: JSONObject): Exercise{
         return Exercise(exerciseJSON.getInt(EXERCISE_ID),
-                        exerciseJSON.getString(EXERCISE_NAME),
+                exerciseJSON.getString(EXERCISE_NAME),
 
-                        if(exerciseJSON.has(EXERCISE_DESCRIPTION))
-                            exerciseJSON.getString(EXERCISE_DESCRIPTION)
-                        else null,
+                if(exerciseJSON.has(EXERCISE_DESCRIPTION))
+                    exerciseJSON.getString(EXERCISE_DESCRIPTION)
+                else null,
 
-                        if(exerciseJSON.has(EXERCISE_URL))
-                            exerciseJSON.getString(EXERCISE_URL)
-                        else null,
+                if(exerciseJSON.has(EXERCISE_URL))
+                    exerciseJSON.getString(EXERCISE_URL)
+                else null,
 
-                        if(exerciseJSON.has(EXERCISE_SETS))
-                            exerciseJSON.getString(EXERCISE_SETS)
-                        else null,
+                if(exerciseJSON.has(EXERCISE_SETS))
+                    exerciseJSON.getString(EXERCISE_SETS)
+                else null,
 
-                        if(exerciseJSON.has(EXERCISE_WORKOUTS_SINCE))
-                            exerciseJSON.getInt(EXERCISE_WORKOUTS_SINCE)
-                        else null
+                if(exerciseJSON.has(EXERCISE_WORKOUTS_SINCE))
+                    exerciseJSON.getInt(EXERCISE_WORKOUTS_SINCE)
+                else null
         )
     }
 

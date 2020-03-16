@@ -40,14 +40,14 @@
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/addExerciseButton"
+        app:layout_constraintBottom_toTopOf="@+id/setExercisesButton"
         app:layout_constraintTop_toBottomOf="@+id/workoutSetSpinner" />
 
     <TextView
-        android:id="@+id/addExerciseButton"
+        android:id="@+id/setExercisesButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Add Exercises"
+        android:text="Set Exercises"
         android:background="@drawable/backround_rounded_corners"
         android:paddingHorizontal="15dp"
         android:paddingVertical="7dp"
