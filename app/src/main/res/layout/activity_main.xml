@@ -4,31 +4,75 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@android:color/black"
+    android:padding="16dp"
+    android:paddingBottom="32dp"
     tools:context=".MainActivity">
+
+    <TextView
+        android:id="@+id/workoutTextView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_horizontal"
+        android:text="Workout: "
+        android:textSize="@dimen/selected_workout_text_size"
+        android:textColor="@android:color/white"
+        app:layout_constraintBottom_toBottomOf="@+id/workoutSetSpinner"
+        app:layout_constraintEnd_toStartOf="@+id/workoutSetSpinner"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Spinner
         android:id="@+id/workoutSetSpinner"
-        android:layout_width="match_parent"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
+        android:gravity="start"
+        android:paddingEnd="0dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_chainStyle="packed"
+        app:layout_constraintStart_toEndOf="@+id/workoutTextView"
         app:layout_constraintTop_toTopOf="parent" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerView"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/button"
+        app:layout_constraintBottom_toTopOf="@+id/addExerciseButton"
         app:layout_constraintTop_toBottomOf="@+id/workoutSetSpinner" />
 
-    <Button
+    <TextView
+        android:id="@+id/addExerciseButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Add Exercises"
+        android:background="@drawable/backround_rounded_corners"
+        android:paddingHorizontal="15dp"
+        android:paddingVertical="7dp"
+        android:layout_marginBottom="7dp"
+        android:textSize="@dimen/exercise_item_name_text_size"
+        app:layout_constraintBottom_toTopOf="@+id/button"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Button"
+        android:text="Finish Training"
+        android:background="@drawable/backround_rounded_corners"
+        android:padding="15dp"
+        android:textSize="@dimen/selected_workout_text_size"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/group"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
 
 
 </androidx.constraintlayout.widget.ConstraintLayout>

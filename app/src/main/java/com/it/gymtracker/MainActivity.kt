@@ -1,26 +1,33 @@
 package com.it.gymtracker
 
+import android.app.Dialog
+import android.content.DialogInterface
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.AdapterView.OnItemSelectedListener
 import android.widget.ArrayAdapter
+import android.widget.Button
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.it.gymtracker.models.*
+import com.it.gymtracker.models.Exercise
+import com.it.gymtracker.models.Workout
+import com.it.gymtracker.models.Workoutable
+import com.it.gymtracker.models.WorkoutableType
 import kotlinx.android.synthetic.main.activity_main.*
-import org.json.JSONObject
+import kotlinx.android.synthetic.main.exercise_picker.*
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var workouts: ArrayList<Workout>
     private lateinit var topWorkouts: List<Workout>
+    private lateinit var currentWorkout: ArrayList<Workoutable>
     private lateinit var exercises: ArrayList<Exercise>
 
-    private lateinit var viewAdapter: RecyclerView.Adapter<*>
+    private lateinit var viewAdapter: ExercisesAdapter
     private lateinit var viewManager: RecyclerView.LayoutManager
 
     private fun testInit() {
@@ -128,14 +135,7 @@ class MainActivity : AppCompatActivity() {
             sets = null
         ))
 
-
-
         Repository.getInstance().setExercises(this, exercises)
-
-
-
-
-
 
         workouts = ArrayList()
         counter = 0
@@ -257,10 +257,10 @@ class MainActivity : AppCompatActivity() {
         initialize()
 
         val arrayAdapter: ArrayAdapter<Workout> =
-            ArrayAdapter(this, android.R.layout.simple_spinner_item,
+            ArrayAdapter(this, R.layout.spinner_selected_item,
                 topWorkouts)
 
-        arrayAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
+        arrayAdapter.setDropDownViewResource(R.layout.spinner_item)
         workoutSetSpinner.adapter = arrayAdapter
         workoutSetSpinner.onItemSelectedListener = object : OnItemSelectedListener {
             override fun onItemSelected(
@@ -279,8 +279,68 @@ class MainActivity : AppCompatActivity() {
         workoutSetSpinner.setSelection(0)
 
         button.setOnClickListener {
-            workouts[0].workoutsSince = 0
-            Repository.getInstance().setWorkouts(this@MainActivity, workouts)
+            val dialogClickListener =
+                DialogInterface.OnClickListener { dialog, which ->
+                    when (which) {
+                        DialogInterface.BUTTON_POSITIVE -> {
+                            workouts.forEach{
+                                it.workoutsSince = if(it.workoutsSince == null) null else it.workoutsSince!! + 1
+                            }
+
+                            exercises.forEach{
+                                it.workoutsSince = if(it.workoutsSince == null) null else it.workoutsSince!! + 1
+                            }
+
+                            currentWorkout.forEach{
+                                it.workoutsSince = 0
+                            }
+
+                            Repository.getInstance().setWorkouts(this@MainActivity, workouts)
+                            Repository.getInstance().setExercises(this@MainActivity, exercises)
+
+                            loadWorkout(workoutSetSpinner.selectedItem as Workout)
+                            dialog.dismiss()
+                        }
+                        DialogInterface.BUTTON_NEGATIVE -> {
+                            dialog.dismiss()
+                        }
+                    }
+                }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("Finish the training?")
+                .setMessage("Are you sure you want to finish this training?")
+                .setPositiveButton("Yes", dialogClickListener)
+                .setNegativeButton("No", dialogClickListener).show()
+        }
+
+
+        addExerciseButton.setOnClickListener {
+            val dialog = Dialog(this@MainActivity)
+            dialog.setContentView(R.layout.exercise_picker)
+            dialog.setTitle("Add Exercise")
+
+
+            @Suppress("UNCHECKED_CAST")
+            val exercisesViewAdapter = ExercisesAdapter(this,
+                exercises.clone() as ArrayList<Exercise>,
+                selectionMode = true,
+                deleteButton = false
+            )
+
+            dialog.exercises_recycler_view.apply{
+                setHasFixedSize(true)
+                layoutManager = viewManager
+                adapter = exercisesViewAdapter
+            }
+
+            val dialogButton = dialog.findViewById(R.id.dialogPickButton) as Button
+            dialogButton.setOnClickListener {
+                //TODO add the exercises
+                dialog.dismiss()
+            }
+
+            dialog.show()
         }
     }
 
@@ -290,13 +350,37 @@ class MainActivity : AppCompatActivity() {
         workouts = repo.getWorkouts(this)
         exercises = repo.getExercises(this)
         topWorkouts = workouts.filter { it.topLevel }
-
         viewManager = LinearLayoutManager(this)
-        viewAdapter = ExercisesAdapter(emptyArray())
     }
 
     private fun loadWorkout(workout: Workout){
-        viewAdapter = ExercisesAdapter(workout.getBestExercises().toTypedArray())
+        currentWorkout = workout.getBestWorkout()
+
+        viewAdapter = ExercisesAdapter(this,
+            currentWorkout.filterIsInstance<Exercise>().toMutableList()
+        )
+
+        viewAdapter.exerciseRemovedListener = { exercise ->
+            val dialogClickListener =
+                DialogInterface.OnClickListener { dialog, which ->
+                    when (which) {
+                        DialogInterface.BUTTON_POSITIVE -> {
+                            currentWorkout.remove(exercise)
+                            dialog.dismiss()
+                        }
+                        DialogInterface.BUTTON_NEGATIVE -> {
+                            dialog.dismiss()
+                        }
+                    }
+                }
+
+            AlertDialog.Builder(this@MainActivity)
+                .setTitle("Remove exercise?")
+                .setMessage("Are you sure you want remove this exercise?")
+                .setPositiveButton("Yes", dialogClickListener)
+                .setNegativeButton("No", dialogClickListener).show()
+        }
+
         recyclerView.apply{
             setHasFixedSize(true)
             layoutManager = viewManager
@@ -304,27 +388,24 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun Workout.getBestExercises(): ArrayList<Exercise>{
-        val bestExercises = ArrayList<Exercise>()
+    private fun Workout.getBestWorkout(): ArrayList<Workoutable>{
+        val bestWorkout = ArrayList<Workoutable>()
 
-        var fullWorkoutables = workoutables.map { getWorkoutable(it) }
+        var fullWorkoutables = workoutables.mapNotNull { getWorkoutable(it) }
 
         maxWorkoutables?.let { max ->
             fullWorkoutables = fullWorkoutables
-                .sortedByDescending { it?.workoutsSince ?: Int.MAX_VALUE }
+                .sortedByDescending { it.workoutsSince ?: Int.MAX_VALUE }
                 .take(max)
         }
 
-        fullWorkoutables.forEach { workoutable ->
-            if(workoutable != null){
-                when (workoutable){
-                    is Workout -> bestExercises.addAll(workoutable.getBestExercises())
-                    is Exercise -> bestExercises.add(workoutable)
-                }
-            }
+        bestWorkout.addAll(fullWorkoutables)
+
+        fullWorkoutables.filterIsInstance<Workout>().forEach { workoutable ->
+            bestWorkout.addAll(workoutable.getBestWorkout())
         }
 
-        return bestExercises
+        return bestWorkout
     }
 
     private fun getWorkoutable(workoutable: Workoutable): Workoutable?{
